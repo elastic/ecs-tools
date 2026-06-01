@@ -1,0 +1,6 @@
+.idea/
+.claude/
+.cursor/
+.cache/
+
+.DS_Store
