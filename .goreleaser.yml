@@ -1,0 +1,17 @@
+version: 2
+project_name: ecs-tools
+
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: "gz"
+    format_overrides:
+      - goos: windows
+        format: "zip"
+    files:
+      - none*
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+changelog:
+  use: github-native

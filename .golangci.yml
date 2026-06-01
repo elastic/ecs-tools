@@ -1,0 +1,54 @@
+version: "2"
+run:
+  modules-download-mode: readonly
+  issues-exit-code: 1
+linters:
+  default: none
+  enable:
+    - errcheck
+    - errorlint
+    - godox
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+  settings:
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    rules:
+      - path: internal/
+        text: should have comment or be unexported
+      - path: internal/
+        text: should have comment \(or a comment on this block\) or be unexported
+      - path: internal/
+        text: should have a package comment
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
+    goimports:
+      local-prefixes:
+        - github.com/elastic/ecs-tools
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
