@@ -2,8 +2,8 @@ You have access to a set of tools for exploring Elastic Common Schema (ECS). Her
 
 ## Overview
 
-The server loads every tagged ECS release (>= v1.12.0) from the configured ECS
-repository into a single SQLite database. Every field, fieldset, and expected
+The server fetches every tagged ECS release (>= v1.12.0) directly from the
+`elastic/ecs` GitHub repository and loads them into a single SQLite database. Every field, fieldset, and expected
 event type row is tagged with the ECS `version` it came from, so all of the
 tools — except `ecs_get_sql_tables` — require a `version` to disambiguate which
 release of ECS to consult.

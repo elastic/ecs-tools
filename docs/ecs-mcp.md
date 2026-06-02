@@ -2,17 +2,19 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes the
 [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) to
-LLM-powered tools. It loads every tagged ECS release into a local SQLite database and
-serves tools for searching, matching, and querying the schema at a specific version —
-so agents can reliably align vendor or custom fields with ECS without hallucinating
-field names.
+LLM-powered tools. It fetches every tagged ECS release directly from GitHub and loads
+them into a local SQLite database, serving tools for searching, matching, and querying
+the schema at a specific version — so agents can reliably align vendor or custom fields
+with ECS without hallucinating field names.
 
 ## Features
 
-- **All tagged ECS releases in one database** — reads every tag (>= v1.12.0) from a
-  local checkout of `elastic/ecs` and loads each release into a single SQLite database
+- **All tagged ECS releases in one database** — fetches every tag (>= v1.12.0) from the
+  `elastic/ecs` GitHub repository and loads each release into a single SQLite database
   with a full-text search index over field names and descriptions. Tool callers select
-  which version to query at call time.
+  which version to query at call time. No local checkout of ECS is required.
+- **Local schema cache** — downloaded schema files are cached on disk (default `.cache/`)
+  so subsequent startups skip network requests for already-fetched releases.
 - **MCP tools for exploration** — inspect the database schema, run ad-hoc SQL, check
   whether a list of field names exists in a given ECS version, or full-text search
   field definitions for that version.
@@ -37,21 +39,22 @@ The resulting `ecs-mcp` binary is self-contained.
 
 ### Running the server
 
-On startup the server reads all tagged ECS releases from the local checkout at
-`-dir` (cloned on first run if the path does not yet exist) and loads each one
-into the database. The server then runs over stdio by default:
+On startup the server fetches all tagged ECS releases from the `elastic/ecs` GitHub
+repository, caches the schema files locally, and loads each release into the database.
+The server then runs over stdio by default:
 
 ```sh
-./ecs-mcp -dir /path/to/ecs
+./ecs-mcp
 ```
 
-`-dir` is required.
+No flags are required. Set `GITHUB_TOKEN` in the environment to authenticate against
+the GitHub API and avoid rate limiting.
 
 Useful flags (also settable via environment variable):
 
 | Flag        | Env                 | Description                                                                                                 |
 |-------------|---------------------|-------------------------------------------------------------------------------------------------------------|
-| `-dir`      | `ECS_MCP_DIR`       | Path to a local checkout of `elastic/ecs`. Cloned on if it does not exist. **Required.**                    |
+| `-cache`    | `ECS_MCP_CACHE`     | Directory for caching downloaded schema files. Default `.cache`. Set to empty string to disable caching.    |
 | `-db`       | —                   | Path to a SQLite file to persist the loaded schema. When omitted, a temp DB is created and removed on exit. |
 | `-listen`   | `ECS_MCP_LISTEN`    | Run an HTTP server on this address (e.g. `localhost:8443`) instead of stdio.                                |
 | `-cert`     | `ECS_MCP_CERT_FILE` | TLS certificate for HTTP mode. Default `cert.pem`.                                                          |
@@ -71,8 +74,7 @@ Add an entry to your MCP client config (`claude_desktop_config.json` for the des
 {
   "mcpServers": {
     "ecs": {
-      "command": "/absolute/path/to/ecs-mcp",
-      "args": ["-dir", "/absolute/path/to/ecs"]
+      "command": "/absolute/path/to/ecs-mcp"
     }
   }
 }
@@ -81,7 +83,7 @@ Add an entry to your MCP client config (`claude_desktop_config.json` for the des
 Or from the Claude Code CLI:
 
 ```sh
-claude mcp add ecs /absolute/path/to/ecs-mcp -- -dir /absolute/path/to/ecs
+claude mcp add ecs /absolute/path/to/ecs-mcp
 ```
 
 Restart the client and confirm the `ecs` server is connected. The `ecs_guide` prompt and
@@ -95,8 +97,7 @@ Add the server to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in your pr
 {
   "mcpServers": {
     "ecs": {
-      "command": "/absolute/path/to/ecs-mcp",
-      "args": ["-dir", "/absolute/path/to/ecs"]
+      "command": "/absolute/path/to/ecs-mcp"
     }
   }
 }

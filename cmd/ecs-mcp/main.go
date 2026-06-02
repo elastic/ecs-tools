@@ -42,7 +42,7 @@ var (
 )
 
 func parseArgs() {
-	flag.StringVar(&cacheDir, "cache-dir", ".cache", "Directory to cache schema files")
+	flag.StringVar(&cacheDir, "cache", ".cache", "Directory to cache schema files")
 	flag.StringVar(&dbFile, "db", "", "path to database file (when omitted, creates a temporary db that is removed on exit)")
 	flag.StringVar(&listen, "listen", "", "listen for HTTP requests on this address, instead of stdin/stdout")
 	flag.StringVar(&certFile, "cert", "cert.pem", "path to TLS certificate file")
