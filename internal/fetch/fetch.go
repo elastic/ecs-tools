@@ -105,12 +105,12 @@ func Schema(ctx context.Context, ref, cache string) (*field.Schema, error) {
 		cacheFile = filepath.Join(cache, ref+"_schema.json")
 	}
 	if cacheFile != "" {
-		if schema, err := loadCachedSchema(cacheFile); err == nil {
+		schema, err := loadCachedSchema(cacheFile)
+		if err == nil {
 			slog.Debug("Using cached schema file", slog.String("file", cacheFile), slog.String("ref", ref))
 			return schema, nil
-		} else {
-			slog.Warn("Failed to load schema cache file", slog.String("filename", cacheFile), slog.String("error", err.Error()))
 		}
+		slog.Warn("Failed to load schema cache file", slog.String("filename", cacheFile), slog.String("error", err.Error()))
 	}
 
 	client := &http.Client{}
