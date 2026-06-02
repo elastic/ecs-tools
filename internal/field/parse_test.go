@@ -22,7 +22,7 @@ func mustReadTestdata(t *testing.T, name string) []byte {
 func TestParse(t *testing.T) {
 	data := mustReadTestdata(t, "ecs_nested.yml")
 
-	schema, err := Parse(data)
+	schema, err := ParseSchema("1.0.0", data)
 	require.NoError(t, err)
 
 	t.Run("fieldsets", func(t *testing.T) {
@@ -122,12 +122,12 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseInvalidYAML(t *testing.T) {
-	_, err := Parse([]byte(":\tinvalid: yaml: ["))
+	_, err := ParseSchema("1.0.0", []byte(":\tinvalid: yaml: ["))
 	assert.Error(t, err)
 }
 
 func TestParseEmpty(t *testing.T) {
-	schema, err := Parse([]byte("{}"))
+	schema, err := ParseSchema("1.0.0", []byte("{}"))
 	require.NoError(t, err)
 	assert.Empty(t, schema.Fieldsets)
 	assert.Empty(t, schema.Fields)

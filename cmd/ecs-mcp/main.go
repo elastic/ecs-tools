@@ -6,7 +6,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -20,22 +19,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/gorilla/handlers"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/elastic/ecs-tools/internal/version"
-
+	"github.com/elastic/ecs-tools/internal/fetch"
 	"github.com/elastic/ecs-tools/internal/field"
-	"github.com/elastic/ecs-tools/internal/git"
 	"github.com/elastic/ecs-tools/internal/store"
+	"github.com/elastic/ecs-tools/internal/version"
 
 	_ "modernc.org/sqlite"
 )
 
 var (
+	cacheDir    string
 	dbFile      string
-	ecsDir      string
 	listen      string
 	certFile    string
 	keyFile     string
@@ -45,8 +42,8 @@ var (
 )
 
 func parseArgs() {
+	flag.StringVar(&cacheDir, "cache-dir", ".cache", "Directory to cache schema files")
 	flag.StringVar(&dbFile, "db", "", "path to database file (when omitted, creates a temporary db that is removed on exit)")
-	flag.StringVar(&ecsDir, "dir", "", "path to local checkout of ECS")
 	flag.StringVar(&listen, "listen", "", "listen for HTTP requests on this address, instead of stdin/stdout")
 	flag.StringVar(&certFile, "cert", "cert.pem", "path to TLS certificate file")
 	flag.StringVar(&keyFile, "key", "key.pem", "path to TLS private key file")
@@ -58,7 +55,7 @@ func parseArgs() {
 }
 
 func readEnv() {
-	getStringEnv("ECS_MCP_DIR", &ecsDir)
+	getStringEnv("ECS_MCP_CACHE", &cacheDir)
 	getStringEnv("ECS_MCP_LISTEN", &listen)
 	getStringEnv("ECS_MCP_CERT_FILE", &certFile)
 	getStringEnv("ECS_MCP_KEY_FILE", &keyFile)
@@ -82,66 +79,24 @@ func getBoolEnv(key string, target *bool) {
 	}
 }
 
-func getTags(ctx context.Context, gitRepo *git.Repo) ([]string, error) {
-	minVersion := semver.MustParse("v1.12.0")
-
-	rawTags, err := gitRepo.Tags(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var tags []string
-	for _, tag := range rawTags {
-		if !strings.HasPrefix(tag, "v") {
-			continue
-		}
-		ver, err := semver.NewVersion(tag)
-		if err != nil || ver.LessThan(minVersion) {
-			continue
-		}
-
-		tags = append(tags, tag)
-	}
-
-	return tags, nil
-}
-
-func getSchemas(ctx context.Context, repo *git.Repo) ([]*field.Schema, error) {
+func getSchemas(ctx context.Context) ([]*field.Schema, error) {
 	var schemas []*field.Schema
 
-	tags, err := getTags(ctx, repo)
+	tags, err := fetch.VersionTags(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	seenVersions := map[string]struct{}{}
-
+	seenVersions := make(map[string]struct{}, len(tags))
 	for _, tag := range tags {
-		ref, err := repo.TagToHash(ctx, tag)
+		schema, err := fetch.Schema(ctx, tag, cacheDir)
 		if err != nil {
 			return nil, err
 		}
-
-		versionRaw, err := repo.ReadFile(ctx, ref, "version")
-		if err != nil {
-			return nil, err
-		}
-		version := string(bytes.TrimSpace(versionRaw))
-
-		if _, ok := seenVersions[version]; ok {
+		if _, ok := seenVersions[schema.Version]; ok {
 			continue
 		}
-		seenVersions[version] = struct{}{}
-
-		defRaw, err := repo.ReadFile(ctx, ref, "generated/ecs/ecs_nested.yml")
-		if err != nil {
-			return nil, err
-		}
-		schema, err := field.Parse(defRaw)
-		if err != nil {
-			return nil, err
-		}
-		schema.Version = version
+		seenVersions[schema.Version] = struct{}{}
 		schemas = append(schemas, schema)
 	}
 
@@ -154,12 +109,7 @@ func Main() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	repo, err := git.NewRepo(ctx, ecsDir, "https://github.com/elastic/ecs.git")
-	if err != nil {
-		return err
-	}
-
-	schemas, err := getSchemas(ctx, repo)
+	schemas, err := getSchemas(ctx)
 	if err != nil {
 		return err
 	}
@@ -268,10 +218,6 @@ func main() {
 	logHandler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
 	slog.SetDefault(slog.New(logHandler))
 
-	if ecsDir == "" {
-		slog.Error("ecs directory (-dir) not specified")
-		os.Exit(1)
-	}
 	if err := Main(); err != nil {
 		slog.Error("Error running app", slog.String("error", err.Error()))
 		os.Exit(1)

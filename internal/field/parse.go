@@ -46,10 +46,12 @@ func (f *fieldsetDef) allowedAtRoot() bool {
 	return true
 }
 
-// Parse will parse Fieldsets and Fields from the provided data. The data is
+// ParseSchema will parse Fieldsets and Fields from the provided data. The data is
 // expected to be in the format of a generated ecs_nested.yml file.
-func Parse(data []byte) (*Schema, error) {
-	var schema Schema
+func ParseSchema(version string, data []byte) (*Schema, error) {
+	schema := Schema{
+		Version: version,
+	}
 
 	var raw map[string]fieldsetDef
 	if err := yaml.Unmarshal(data, &raw); err != nil {
