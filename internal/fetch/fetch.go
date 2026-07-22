@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -109,8 +110,9 @@ func Schema(ctx context.Context, ref, cache string) (*field.Schema, error) {
 		if err == nil {
 			slog.Debug("Using cached schema file", slog.String("file", cacheFile), slog.String("ref", ref))
 			return schema, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			slog.Warn("Failed to load schema cache file", slog.String("filename", cacheFile), slog.String("error", err.Error()))
 		}
-		slog.Warn("Failed to load schema cache file", slog.String("filename", cacheFile), slog.String("error", err.Error()))
 	}
 
 	client := &http.Client{}
@@ -130,15 +132,6 @@ func Schema(ctx context.Context, ref, cache string) (*field.Schema, error) {
 	schema, err := field.ParseSchema(version, schemaRaw)
 	if err != nil {
 		return nil, err
-	}
-
-	if cacheFile != "" {
-		if err = os.MkdirAll(filepath.Dir(cacheFile), 0o755); err == nil {
-			cached := schemaFile{Version: version, Data: schemaRaw}
-			if data, err := json.Marshal(&cached); err == nil {
-				_ = os.WriteFile(cacheFile, data, 0o644)
-			}
-		}
 	}
 
 	if cacheFile != "" {
