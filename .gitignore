@@ -4,3 +4,8 @@
 .cache/
 
 .DS_Store
+*.db
+
+ecs-mcp.exe
+ecs-mcp
+!ecs-mcp/
