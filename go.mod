@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/stretchr/testify v1.11.1
-	go.yaml.in/yaml/v4 v4.0.0-rc.4
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	modernc.org/sqlite v1.54.0
 )
 
