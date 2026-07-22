@@ -62,6 +62,7 @@ func NewDB(ctx context.Context, dbFile string, schemas []*field.Schema) (*sql.DB
 
 			return err
 		}); err != nil {
+			db.Close()
 			return nil, err
 		}
 
@@ -108,6 +109,7 @@ func NewDB(ctx context.Context, dbFile string, schemas []*field.Schema) (*sql.DB
 
 			return nil
 		}); err != nil {
+			db.Close()
 			return nil, err
 		}
 
@@ -125,6 +127,7 @@ func NewDB(ctx context.Context, dbFile string, schemas []*field.Schema) (*sql.DB
 
 			return nil
 		}); err != nil {
+			db.Close()
 			return nil, err
 		}
 
