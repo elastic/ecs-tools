@@ -134,3 +134,7 @@ via `ecs_execute_sql_query`.
 In addition, the server registers the `ecs_guide` prompt, which returns a short
 walkthrough of how to combine the tools when mapping fields to ECS, including
 how to select a version.
+
+## Skills
+
+Skills leveraging the ECS MCP server can be found in the `skills/` directory of this repository with a prefix of `ecs-mcp`.
